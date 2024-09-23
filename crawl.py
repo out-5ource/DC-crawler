@@ -2,6 +2,25 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext
 import requests
 from bs4 import BeautifulSoup
+import json
+from tkinter import filedialog
+
+
+file_data = []
+
+def save_json():
+    print("filedata:", file_data)
+
+    try:
+        # 파일 저장 대화상자 열기
+        file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON 파일", "*.json")])
+        
+        if file_path:
+            # JSON 파일로 저장
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(file_data, f, default=str, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"오류 발생: {str(e)}")
 
 class DCInsideCrawler:
     def __init__(self, master):
@@ -46,6 +65,11 @@ class DCInsideCrawler:
 
         ttk.Button(input_frame, text="크롤링 시작", command=self.start_crawling).grid(row=5, column=0, columnspan=2, pady=10)
 
+
+        # json 다운 버튼
+        save_button = tk.Button(root, text="JSON 파일로 저장", command=save_json)
+        save_button.pack(pady=20)
+
         # 결과 표시 영역
         self.result_text = scrolledtext.ScrolledText(master, wrap=tk.WORD, width=70, height=20)
         self.result_text.pack(padx=10, pady=10, expand=True, fill=tk.BOTH)
@@ -69,7 +93,6 @@ class DCInsideCrawler:
                 url = f"https://gall.dcinside.com/{g}board/lists/"
                 params = {'id' : gall_entry, 'page' : j}
                 headers = {"User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"}
-                print(best_only)
                 if best_only:
                     print("개념글만 옮기기")
                     params['exception_mode'] = 'recommend'
@@ -79,29 +102,27 @@ class DCInsideCrawler:
                 if article:
                     url_check = True
                     break
-                print(soup)
             if url_check:
                 for i in article:
                     link = "https://gall.dcinside.com/" + i.select("a")[0]['href'].strip() #웹사이트 링크
 
-                    ###########
                     headers = {"User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"}
 
                     webpage = requests.get(link, headers=headers)
                     soup = BeautifulSoup(webpage.content, "html.parser")
-                    title = soup.select('.title_subject')[0].text.strip()
                     
-                    self.result_text.insert(tk.END, f"제목: {title}\n")
-                    # 본문 내용 추출
-                    content = soup.select('div.write_div')
+                    title = soup.select('.title_subject')[0].text.strip()
+                    html = soup.select('div.write_div')
 
-                    self.result_text.insert(tk.END, f"제목: {content}\n")
+                    self.result_text.insert(tk.END, f"제목: {title}\n")
+                    self.result_text.insert(tk.END, f"제목: {html}\n")
+
+                    file_data.append({"title":title, "html":html})
 
                     self.result_text.see(tk.END)
                     self.master.update()
             else:
                 self.result_text.insert(tk.END, "데이터가 없습니다.\n")
-
 if __name__ == "__main__":
     root = tk.Tk()
     app = DCInsideCrawler(root)
